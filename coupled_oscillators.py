@@ -10,7 +10,8 @@ from scipy.linalg import hankel
 from sklearn.utils.extmath import randomized_svd
 from sklearn.model_selection import train_test_split
 
-seed = 29
+seed = 1
+#TODO: check testing instances are distributed kinda uniformly over the domain
 
 #%%
 ######################       PROBLEM SETUP       ######################
@@ -41,8 +42,10 @@ system = {
     'csi2' : 5e-3,
 
     #Coupling:
-    'sigma' : 1e-3, #quadratic
-    'alpha' : -1e-2, #linear
+    'sigma' : 2e-3, #quadratic
+    'alpha' : -6e-2, #linear 
+    #TODO: increasing the coupling makes time-delay embedding hard to capture the behavior with just 4 modes
+    # decreasing the coupling makes the observed oscillator less sensitive wrt changes in parameters in the second (hidden) one
 
     #Nonlinearities:
     'gamma' : 1e-4, #cubic
@@ -107,8 +110,9 @@ u2_0 = sign * scale * u1_0
 #u2_0_train = np.random.uniform(min_x2, max_x2,n_ics)'''
 
 np.random.seed(seed=seed)  
-u1_0 = np.random.normal(3.,1,n_ics)
-u2_0 = np.random.normal(-2.,1,n_ics)
+u1_0 = np.random.normal(-2,1,n_ics)
+u2_0 = np.random.normal(3,1,n_ics)
+#TODO: give high initial value to the hidden oscillator such that its dynamic contribution is signifcant
 
 v1_0 = np.repeat(0.,n_ics)
 v2_0 = np.repeat(0.,n_ics)
@@ -141,8 +145,7 @@ X = np.array(X)
 X_train, X_test, w2_train, w2_test = train_test_split(X, w2, test_size=0.2, random_state=seed)
 n_train, n_test = len(X_train), len(X_test)
 
-
-
+print(w2_test)
 # %%
 ######################       TIME-DELAY EMBEDDING       ######################
 
@@ -154,7 +157,8 @@ def create_hankel(vector, length, shift = 1):
     return H
 
 #Create Hankel matrix from observations of u1:
-length, shift = 300, 5
+length, shift = 200, 5
+#TODO: length can be increased
 
 for i in range(n_train):
     u1 = X_train[i,:,0]
@@ -232,10 +236,11 @@ model = ps.SINDy(feature_names  = feature_names, feature_library= ps.PolynomialL
 model.fit(X_tdc, t=dt, multiple_trajectories=True, u = param_tdc, x_dot = dX_tdc) 
 
 model.print()
+
 # %%
 ######################      PREDICT       ######################
 idx_test = 0
-idx_test_fake = 1
+idx_test_fake = 0
 fake_param = param_test_tdc[idx_test_fake][0]
 print('Real parameter:', param_test_tdc[idx_test][0], 'Fake parameter:', fake_param)
 
@@ -267,8 +272,8 @@ print('MSE', mean_squared_error(X_test[idx_test,:Nt_h-1,0], x_rec[:Nt_h,0]))
 
 # %%
 ######################      PREDICT       ######################
-idx_train = 0
-idx_train_fake = 0
+idx_train = 2
+idx_train_fake = 2
 fake_param = param_tdc[idx_train][0]
 print('Real parameter:', param_tdc[idx_train][0], 'Fake parameter:', fake_param)
 

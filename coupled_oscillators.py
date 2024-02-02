@@ -305,7 +305,7 @@ plt.legend(fontsize = 12)
 print('MSE', mean_squared_error(X_test[idx_test,:Nt_h-1,0], x_rec[:Nt_h,0]))
 
 '''
-
+######################      OUTPUT INFO       ######################
 
 '''
 OUTPUTS:

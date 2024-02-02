@@ -309,15 +309,18 @@ print('MSE', mean_squared_error(X_test[idx_test,:Nt_h-1,0], x_rec[:Nt_h,0]))
 
 '''
 OUTPUTS:
-    model:      SINDy model
-    X_tdc:      time delayed coordinates. It is a list (of length n_train=12, that is the number of training time-series),
-                where each element is an array of shape (Nt_tdc, n_coordinates) = (190001, 4), that is the time-history of length Nt_tdc,
-                of the n_coordinates time-delayed coordinates.
-    dX_tdc:     derivatives of the time delayed coordinates.
-    param_tdc:  list of parameters, i.e. natural frequencies of the hidden oscillator. Same shape of the data 
-                (but they are constant time histories as parameter is not varying in time).
-    U, S:       Matrix of left singular values (of the SVD of the Hankel matrix) and singular value matrix, respectively.
-                They are used to go from the original cooridnates to the time-delayed coordinates and viceversa (via projection).
+    model:          SINDy model
+    X_tdc:          time delayed coordinates. It is a list (of length n_train=12, that is the number of training time-series),
+                    where each element is an array of shape (Nt_tdc, n_coordinates) = (190001, 4), that is the time-history of length Nt_tdc,
+                    of the n_coordinates time-delayed coordinates.
+    dX_tdc:         derivatives of the time delayed coordinates.
+    param_tdc:      list of parameters, i.e. natural frequencies of the hidden oscillator. Same shape of the data 
+                    (but they are constant time histories as parameter is not varying in time).
+
+    X_tdc_test:     Analogous structure but on test data.
+    param_tdc_test: " "
+    U, S:           Matrix of left singular values (of the SVD of the Hankel matrix) and singular value matrix, respectively.
+                    They are used to go from the original cooridnates to the time-delayed coordinates and viceversa (via projection).
             
 
 '''

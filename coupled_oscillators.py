@@ -240,7 +240,7 @@ model.print()
 # %%
 ######################      PREDICT       ######################
 idx_test = 0
-idx_test_fake = 0 
+idx_test_fake = 0
 fake_param = param_test_tdc[idx_test_fake][0]
 print('Real parameter:', param_test_tdc[idx_test][0], 'Fake parameter:', fake_param)
 
@@ -270,8 +270,9 @@ plt.legend(fontsize = 12)
 
 print('MSE', mean_squared_error(X_test[idx_test,:Nt_h-1,0], x_rec[:Nt_h,0]))
 
-'''
+
 # %%
+'''
 ######################      PREDICT       ######################
 idx_train = 2
 idx_train_fake = 2

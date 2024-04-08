@@ -179,21 +179,3 @@ def read_data_no_noise(data_root_ID,ID_sensor,seq_len,n_channels):
             i4 = i4 + seq_len
     # Return
     return X, n_instances
-
-# old
-
-# # concatenate data lstm ################################################################################################################
-# def concatenate_data_lstm(data_o,N_l,N_i,N_o):
-#     data = np.zeros((N_i,N_l,N_o))
-#     for i1 in range(N_o):
-#         data[:,:,i1] = data_o[:,:,i1]
-#     return data
-
-# # concatenate data lstm2 ###############################################################################################################
-# def concatenate_data_lstm_2(data_o,h,N_LSTM_2):    
-#     data = np.zeros((data_o.shape(0),data_o.shape(1),data_o.shape(2)+N_LSTM_2))
-#     for i1 in range(data_o.shape(2)):
-#         data[:,:,i1] = data_o[:,:,i1]
-#     for i1 in range(N_LSTM_2):
-#         data[:,:,data_o.shape(2)+N_LSTM_2] = h[:,:,i1]
-#     return data

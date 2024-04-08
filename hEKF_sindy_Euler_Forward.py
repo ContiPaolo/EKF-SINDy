@@ -1,4 +1,6 @@
 #%%
+%matplotlib widget
+
 import matplotlib.pyplot as plt
 import numpy as np
 import copy
@@ -282,7 +284,7 @@ N_o = N_ou*load_displ+N_ov*load_veloc+N_oa*load_accel  #numero osservazioni
 N_f = 2   #numero termini forza
 N_theta = 1  #numero parametri
 
-test_performed = 1  #number of the test to be performed 
+test_performed = 17  #number of the test to be performed 
 
 theta_diff = -0.2 #sottostima (se >0) relativa del parametro iniziale
 
@@ -417,27 +419,7 @@ if scale_for_u:
 #     inp[:,N_obs_u+N_obs_v:N_obs_u+N_obs_v+N_obs_a] = inp[:,N_obs_u+N_obs_v:N_obs_u+N_obs_v+N_obs_a] / scale_ddx
 
 #%% parametri per la calilbrazione del filtro °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
-# # displacement, velocity (riscalato) test 1 3_20 + 3_15
-# p0_ou = 1e-4
-# p0_ov = 1e-4
-# p0_theta = 1e-2
-# q_ou = 5e-3
-# q_ov = 5e-3
-# q_theta = 1e-7
-# r_ou = 1e-3
-# r_ov = 1e-3
-# r_oa = 1e-5
-# # displacement (riscalato), velocity, acceleration test 1 3_20 + 3_15
-# p0_ou = 1e-8
-# p0_ov = 1e-8
-# p0_theta = 1e-2
-# q_ou = 5e-3
-# q_ov = 5e-3
-# q_theta = 1e-8
-# r_ou = 1e-3
-# r_ov = 1e-3
-# r_oa = 1e+3
-# displacement (riscalato), velocity, acceleration test 10 3_20 + 3_15 (add_noise) funziona benissimo
+# displacement (riscalato), velocity, acceleration test 1 3_20 + 3_15 (add_noise) funziona benissimo
 p0_ou = 1e-8
 p0_ov = 1e-8
 p0_theta = 1e-2
@@ -447,16 +429,6 @@ q_theta = 1e-8
 r_ou = 1e-3
 r_ov = 1e-3
 r_oa = 1e+3
-# displacement (riscalato), velocity, acceleration test 1 3_22
-# p0_ou = 1e-6
-# p0_ov = 1e-6
-# p0_theta = 1e-2
-# q_ou = 1e-2
-# q_ov = 1e-2
-# q_theta = 1e-4
-# r_ou = 1e-5
-# r_ov = 1e-5
-# r_oa = 1e-6
 # °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 
 #%% perform the hybrid EKF
@@ -552,33 +524,40 @@ n_time_steps_start_plot = 0
 n_time_steps_stop_plot = 4095
 
 #%% theta
+plt.figure(figsize = [8,4])
 plt.plot(t_axis[n_time_steps_start_plot:n_time_steps_stop_plot],xhat_taxis[4,n_time_steps_start_plot:n_time_steps_stop_plot],'k')
 plt.plot(t_axis[n_time_steps_start_plot:n_time_steps_stop_plot],xhat_taxis_piu_sigma[4,n_time_steps_start_plot:n_time_steps_stop_plot],'k',linestyle='--')
 plt.plot(t_axis[n_time_steps_start_plot:n_time_steps_stop_plot],xhat_taxis_meno_sigma[4,n_time_steps_start_plot:n_time_steps_stop_plot],'k',linestyle='--')
 plt.plot(t_axis[n_time_steps_start_plot:n_time_steps_stop_plot],inp[n_time_steps_start_plot:n_time_steps_stop_plot,6],'orange')
+plt.show()
 
 #%% displacement
+plt.figure(figsize = [8,4])
 plt.plot(t_axis[n_time_steps_start_plot:n_time_steps_stop_plot],xhat_taxis[0,n_time_steps_start_plot:n_time_steps_stop_plot],'k')
 plt.plot(t_axis[n_time_steps_start_plot:n_time_steps_stop_plot],xhat_taxis_piu_sigma[0,n_time_steps_start_plot:n_time_steps_stop_plot],'k',linestyle='--')
 plt.plot(t_axis[n_time_steps_start_plot:n_time_steps_stop_plot],xhat_taxis_meno_sigma[0,n_time_steps_start_plot:n_time_steps_stop_plot],'k',linestyle='--')
 plt.plot(t_axis[n_time_steps_start_plot:n_time_steps_stop_plot],inp[n_time_steps_start_plot:n_time_steps_stop_plot,0],'orange')
 if load_no_noise_data or add_noise:
     plt.plot(t_axis[n_time_steps_start_plot:n_time_steps_stop_plot],inp_no_noise[n_time_steps_start_plot:n_time_steps_stop_plot,0],'gray')
+plt.show()
 
 #%% velocity
+plt.figure(figsize = [8,4])
 plt.plot(t_axis[n_time_steps_start_plot:n_time_steps_stop_plot],xhat_taxis[2,n_time_steps_start_plot:n_time_steps_stop_plot],'k')
 plt.plot(t_axis[n_time_steps_start_plot:n_time_steps_stop_plot],xhat_taxis_piu_sigma[2,n_time_steps_start_plot:n_time_steps_stop_plot],'k',linestyle='--')
 plt.plot(t_axis[n_time_steps_start_plot:n_time_steps_stop_plot],xhat_taxis_meno_sigma[2,n_time_steps_start_plot:n_time_steps_stop_plot],'k',linestyle='--')
 plt.plot(t_axis[n_time_steps_start_plot:n_time_steps_stop_plot],inp[n_time_steps_start_plot:n_time_steps_stop_plot,2],'orange')
 if load_no_noise_data or add_noise:
     plt.plot(t_axis[n_time_steps_start_plot:n_time_steps_stop_plot],inp_no_noise[n_time_steps_start_plot:n_time_steps_stop_plot,2],'gray')
+plt.show()
 
 #%% acceleration
+    plt.figure(figsize = [8,4])
 plt.plot(t_axis[n_time_steps_start_plot:n_time_steps_stop_plot],a_axis[0,n_time_steps_start_plot:n_time_steps_stop_plot],'k')
 plt.plot(t_axis[n_time_steps_start_plot:n_time_steps_stop_plot],inp[n_time_steps_start_plot:n_time_steps_stop_plot,4],'orange')
 if load_no_noise_data or add_noise:
     plt.plot(t_axis[n_time_steps_start_plot:n_time_steps_stop_plot],inp_no_noise[n_time_steps_start_plot:n_time_steps_stop_plot,4],'gray')
-
+plt.show()
 
 #%% Rescale the observation for output representation
 if scale_for_u:
@@ -607,7 +586,7 @@ if load_no_noise_data or add_noise:
         inp_no_noise[:,:N_obs_u] = inp_no_noise[:,:N_obs_u] * scale_x
 
 #%% Save the data for importing them in Matlab (MAT extension)
-save_mat_data_ID =  data_root_ID + '\\' + data_ID + '_output_for_matlab.mat'
+save_mat_data_ID =  data_root_ID + '\\' + model_ID + '_output_for_matlab.mat'
 if load_no_noise_data or add_noise:
     savemat(save_mat_data_ID, {'t_axis': t_axis, 'xhat_taxis': xhat_taxis, 'xhat_taxis_piu_sigma': xhat_taxis_piu_sigma, 'xhat_taxis_meno_sigma': xhat_taxis_meno_sigma,'a_axis':a_axis,'inp':inp,'inp_no_noise':inp_no_noise})
 else:

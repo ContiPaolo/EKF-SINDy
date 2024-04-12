@@ -8,11 +8,11 @@ Source code of the paper **"EKF–SINDy: Empowering the extended Kalman filter w
 The preprint is available on [arXiv](http://arxiv.org/abs/2404.07536).
 
 ## Test cases
-1. Shear building under seismic excitations
-- Estimation of the inter-storey stiffness
-2.  Partially observed nonlinear system:
-- Estimation of stifness of hidden oscillator
-- Estimation of linear and quadratic coupling coefficients
+- Shear building under seismic excitations
+  - Estimation of the inter-storey stiffness `Available soon!`
+- Partially observed nonlinear system:
+  - Estimation of stifness of hidden oscillator `Available soon!`
+  - Estimation of linear and quadratic coupling coefficients `Available soon!`
 
 <!--  ### How to Cite
 If you find this work useful in your research, please consider citing:

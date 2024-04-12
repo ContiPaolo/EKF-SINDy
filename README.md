@@ -9,13 +9,13 @@ Abstract: Observed data from a dynamic system can be assimilated into a predicti
 ## Reference
 For more detailed information on our research, please see our paper available on [arXiv](http://arxiv.org/abs/2404.07536).
 
-### How to Cite
-If you find this work useful in your research, please consider citing:
-
-```bibtex
-@article{ekf_sindy_2024,
-  title={EKF–SINDy: Empowering the Extended Kalman Filter with Sparse Identification of Nonlinear Dynamics},
-  author={Author1, A. and Author2, B. and Author3, C.},
-  journal={arXiv preprint arXiv:2404.07536},
-  year={2024}
-}
+%### How to Cite
+%If you find this work useful in your research, please consider citing:
+%
+%```bibtex
+%@article{ekf_sindy_2024,
+%  title={EKF–SINDy: Empowering the Extended Kalman Filter with Sparse Identification of Nonlinear Dynamics},
+%  author={Author1, A. and Author2, B. and Author3, C.},
+%  journal={arXiv preprint arXiv:2404.07536},
+%  year={2024}
+%}

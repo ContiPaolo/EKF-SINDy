@@ -10,7 +10,7 @@ The preprint is available on [arXiv](http://arxiv.org/abs/2404.07536).
   - Estimation of the inter-storey stiffness `Available soon!`
 - Partially observed nonlinear system:
   - Estimation of stifness of hidden oscillator `Available soon!`
-  - Estimation of linear and quadratic coupling coefficients `Available soon!`
+  - Estimation of linear and quadratic coupling coefficients `CoupledOscillators_CouplingEstimation.ipynb`
 
 <!--  ### How to Cite
 If you find this work useful in your research, please consider citing:

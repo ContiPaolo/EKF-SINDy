@@ -3,10 +3,16 @@
 Source code of the paper **"EKF–SINDy: Empowering the extended Kalman filter with sparse identification of nonlinear dynamics"**
 ![graphical_abstract-ezgif com-crop](https://github.com/ContiPaolo/EKF-SINDy/assets/51111500/d94bc746-9b4f-4830-a5b3-8ed06041652f)
 
+
 ## Reference
 The preprint is available on [arXiv](http://arxiv.org/abs/2404.07536).
 
-
+## Test cases
+1. Shear building under seismic excitations
+- Estimation of the inter-storey stiffness
+2.  Partially observed nonlinear system:
+- Estimation of stifness of hidden oscillator
+- Estimation of linear and quadratic coupling coefficients
 
 <!--  ### How to Cite
 If you find this work useful in your research, please consider citing:

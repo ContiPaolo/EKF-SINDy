@@ -1,6 +1,6 @@
 #%%
 ######################       LIBRARIES       ######################
-%matplotlib widget
+#%matplotlib widget
 
 import pysindy as ps
 import numpy as np
@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
 from scipy.integrate import odeint
 from scipy.linalg import hankel
+from pyDOE import lhs
 from scipy.io import savemat
 from sklearn.utils.extmath import randomized_svd
 from sklearn.model_selection import train_test_split
@@ -17,7 +18,7 @@ from utils_DEKF import add_noise_with_snr
 
 seed = 1
 
-#%% data root
+#%% data root #TODO: change root
 root_ID = r"D:\Luca\Dati\DEKF"
 problem_ID = r"2DOF_nonLinear"
 data_ID = r"2_1SENDy"
@@ -28,44 +29,40 @@ data_root_ID = root_ID + '\\' + problem_ID + '\\' + data_ID
 '''
 We consider two coupled oscillators with the following equations of motion:
 u1'' + ω1^2 u1 + 2ξω1 u1' + α u2 = 0,
-u2'' + ω2^2 u2 + 2ξω2 u2' + α u1 + σ u1^2 + γ u2^3 = 0,
+u2'' + ω2^2 u2 + 2ξω2 u2' + α u1 + β u1^2 + γ u2^3 = 0,
 
 which can be rewritten at first order as:
 u1' = v1,
 v1' = - ω1^2 u1 - 2ξω1 v1 - α u2,
 u2' = v2,
-v2' = - ω2^2 u2 - 2ξω2 v2 - α u1 - σ u1^2 - γ u2^3.
+v2' = - ω2^2 u2 - 2ξω2 v2 - α u1 - β u1^2 - γ u2^3.
 
 We suppose we are only able to measure the position of the first oscillator u1, 
 and we want to
-(1) identify the equations of motion from the data
-(2) estimate the natural frequencies ω2 of the hidden oscillator.
+(Alg. 1) identify the equations of motion from the data (SINDy)
+(Alg. 2) estimate the states and the linear and quadratic, α and β, coupling parameters
 '''
 
 system = {
-    #Natural frequency of the observed oscillator:
+    #Natural frequency of the oscillators:
     'w1' : 1.,
     'w2' : 1.95,
-    #w2 instead will vary and it is the parameter we want to estimate
 
     #Damping:
     'csi1' : 1e-2,
     'csi2' : 5e-3,
 
     #Coupling:
-    'be' : 2e-3, #2e-3, #quadratic
-    'al' : -1e-1,# -6e-2, #linear 
-    #TODO: increasing the coupling makes time-delay embedding hard to capture the behavior with just 4 modes
-    # decreasing the coupling makes the observed oscillator less sensitive wrt changes in parameters in the second (hidden) one
+    #To be estimated
 
-    #Nonlinearities:
-    'gamma' : 1e-3,#1e-4, #cubic
+    #Cubic nonlinearity:
+    'gamma' : 1e-3,
 
-    #Time:
+    #Time span:
     't0' : 0.,
     'T' : 200.,
 
-    #Time interval:
+    #Time step:
     'dt' : 1e-2
 }
 
@@ -80,13 +77,13 @@ def f(y,t, system = system, forced = True):
     csi1 = system['csi1']
     csi2 = system['csi2']
     gamma = system['gamma']
-    be = system['be']
-    al = system['al']
+    beta = system['beta']
+    alpha = system['alpha']
 
     du1 = v1
-    dv1 = - (w1**2)*u1 -2.*csi1*w1*v1  - al*u2 
+    dv1 = - (w1**2)*u1 -2.*csi1*w1*v1  - alpha*u2 
     du2 = v2
-    dv2 = - (w2**2)*u2  -2.*csi2*w2*v2 - be*(u1**2) - al*u1 - gamma*(u2**3) 
+    dv2 = - (w2**2)*u2  -2.*csi2*w2*v2 - beta*(u1**2) - alpha*u1 - gamma*(u2**3) 
 
     return np.array([du1, dv1, du2, dv2])
 
@@ -100,11 +97,9 @@ Nt = len(t)
 # %%
 ######################       GENERATE DATA       ######################
 #Number of instances
-from pyDOE import lhs
 n_ics = 20
-#n_ics = 16
 
-#Generate random ICs, while we consider zero initial velocities:
+#Generate random intial conditions for the displacement, while we consider zero initial velocities:
 np.random.seed(seed=seed)  
 u1_0 = np.random.normal(-2,1,n_ics)
 u2_0 = np.random.normal(3,1,n_ics)
@@ -112,40 +107,29 @@ u2_0 = np.random.normal(3,1,n_ics)
 v1_0 = np.repeat(0.,n_ics)
 v2_0 = np.repeat(0.,n_ics)
 
-#Generate equispaced parameters (coupling coefficietns, al --alpha-- and be --beta--) in the range P_al = [-0.05, -0.5] and P_be =  [0.001, 0.01]
-#min_al, max_al = 0.005, 0.5
-min_al, max_al = 0.005, 0.5#0.001, 0.1
-#min_be, max_be = 0.01, 1.
-min_be, max_be = 0.005, 0.5#0.005, 0.5
+#Generate equispaced parameters for α and β, in the range P_α = [-0.05, -0.5] and P_β =  [0.001, 0.01]
+min_alpha, max_alpha = 0.005, 0.5
+min_beta, max_beta = 0.005, 0.5
 samples = lhs(2, samples=n_ics)
 #Log space the data to have more samples in the lower range
-al = np.log(min_al) + (np.log(max_al) - np.log(min_al))*samples[:,0]
-be = np.log(min_be) + (np.log(max_be) - np.log(min_be))*samples[:,1]
-al = -np.exp(al)
-be = np.exp(be)
+alpha = np.log(min_alpha) + (np.log(max_alpha) - np.log(min_alpha))*samples[:,0]
+beta = np.log(min_beta) + (np.log(max_beta) - np.log(min_beta))*samples[:,1]
+alpha = -np.exp(alpha)
+beta = np.exp(beta)
+
+param_coupling = np.concatenate((alpha.reshape(-1,1), beta.reshape(-1,1)), axis = 1)
 
 
-#al = min_al + (max_al - min_al)*samples[:,0]
-#be = min_be + (max_be - min_be)*samples[:,1]
-param_coupling = np.concatenate((al.reshape(-1,1), be.reshape(-1,1)), axis = 1)
-
-#al = np.linspace(min_al, max_al, n_ics_single, endpoint = True)
-#be = np.linspace(min_be, max_be, n_ics_single, endpoint = True)
-#param_coupling = np.array([[a,b] for a in al for b in be])
-
-
-#Generate equispaced parameters (natural frequency of the hidden oscilator, ω2) in the range P =  [1., 2.]
-#min_w2, max_w2 = 1., 2.
-#w2= np.linspace(min_w2, max_w2, n_ics, endpoint = True)
-
-#Generate data
 X = []
 
-for i in range(n_ics):
-    y0 = np.array([u1_0[i], v1_0[i], u2_0[i], v2_0[i]])
-    #system['w2'] = w2[i]
-    system['al'], system['be'] = param_coupling[i]
+for num_sim in range(n_ics):
+    #Set initial conditions:
+    y0 = np.array([u1_0[num_sim], v1_0[num_sim], u2_0[num_sim], v2_0[num_sim]])
+    #Retrieve coupling parameters:
+    system['alpha'], system['beta'] = param_coupling[num_sim]
+    #Solve the ODE:
     sol = odeint(f, y0, t) 
+    #Store the solution:
     X.append(sol)
 
     u1, v1, u2, v2 = np.hsplit(sol, 4)
@@ -155,17 +139,17 @@ for i in range(n_ics):
     plt.plot(t,u1, label = '$u_1$')
     plt.plot(t,u2, label = '$u_2$')
     plt.legend(fontsize = 12)
+    plt.title('Simulation #' + str(num_sim+1), fontsize = 12)
     plt.xlabel('t', fontsize = 12)
 
     plt.show()
 
 X = np.array(X)
-#X_train, X_test, w2_train, w2_test = train_test_split(X, w2, test_size=0.2, random_state=seed)
+
+#Split the data into training and test sets:
 X_train, X_test, param_train, param_test = train_test_split(X, param_coupling, test_size=0.2, random_state=seed)
 n_train, n_test = len(X_train), len(X_test)
 
-#print(w2_test)
-print(param_test)
 # %%
 ######################       TIME-DELAY EMBEDDING       ######################
 
@@ -193,6 +177,8 @@ uh, sh, vh = randomized_svd(H, n_components=16)
 #Plot singular values:
 plt.figure()
 plt.plot(sh/np.sum(sh),'r*-')
+plt.ylabel("$s_\lambda / \sum_{i}s_i$", fontsize = 14)
+plt.xlabel("$\lambda$", fontsize = 14)
 
 # %%
 ######################      TIME-DELAY COORDINATES       ######################
@@ -247,9 +233,7 @@ for i in range(n_train):
     X_tdc.append(u_h[:,:n_tdc])
     dX_tdc.append(np.gradient(u_h[:,:n_tdc], dt, axis = 0))
     param_tdc.append(np.tile(param_train[i], (Nt,1))[:Nt_h])
-    #param_tdc.append(np.repeat(w2_train[i], Nt)[:Nt_h])
     feature_names = ["u" + str(i+1) for i in range(n_tdc)]
-    #feature_names +=  ["w2"]
     feature_names +=  ["a", "b"]
 
 for i in range(n_test):
@@ -260,21 +244,22 @@ for i in range(n_test):
     X_test_tdc.append(u_h[:,:n_tdc])
     dX_test_tdc.append(np.gradient(u_h[:,:n_tdc], dt, axis = 0))
     param_test_tdc.append(np.tile(param_test[i], (Nt,1))[:Nt_h])
-    #param_test_tdc.append(np.repeat(w2_test[i], Nt)[:Nt_h])
 
 
 # %%
 ######################      CREATE SINDy model       ######################
-model = ps.SINDy(feature_names  = feature_names, feature_library= ps.PolynomialLibrary(degree = 3), optimizer=ps.STLSQ(threshold=5e-4))
+model = ps.SINDy(feature_names  = feature_names, feature_library= ps.PolynomialLibrary(degree = 3, include_bias=False), optimizer=ps.STLSQ(threshold=1e-3))
 model.fit(X_tdc, t=dt, multiple_trajectories=True, u = param_tdc, x_dot = dX_tdc) 
 
 model.print()
+A = model.coefficients()
 
 # %%
 ######################  (a mano)    CREATE SINDy model       ######################
 
 feature_names = ["x1", "x2", "x3", "x4", "al", "be"]
 sindy_library = [lambda x: x, 
+                 
                 lambda x1, x2, x3, x4, al, be: x1*x1, #secondo grado
                 lambda x1, x2, x3, x4, al, be: x1*x2,
                 lambda x1, x2, x3, x4, al, be: x1*x3,
@@ -301,98 +286,118 @@ sindy_library = [lambda x: x,
                 lambda x1, x2, x3, x4, al, be: al*be,
 
                 lambda x1, x2, x3, x4, al, be: be*be,
-                
-                lambda x1, x2, x3, x4, al, be: x1*x1*x1, 
+
+                lambda x1, x2, x3, x4, al, be: x1*x1*x1, #terzo grado
                 lambda x1, x2, x3, x4, al, be: x1*x1*x2,
                 lambda x1, x2, x3, x4, al, be: x1*x1*x3,
                 lambda x1, x2, x3, x4, al, be: x1*x1*x4,
                 lambda x1, x2, x3, x4, al, be: x1*x1*al,
                 lambda x1, x2, x3, x4, al, be: x1*x1*be,
 
-                lambda x1, x2, x3, x4, al, be: x2*x2*x1, 
+                lambda x1, x2, x3, x4, al, be: x1*x2*x2,
+                lambda x1, x2, x3, x4, al, be: x1*x2*x3,
+                lambda x1, x2, x3, x4, al, be: x1*x2*x4,
+                lambda x1, x2, x3, x4, al, be: x1*x2*al,
+                lambda x1, x2, x3, x4, al, be: x1*x2*be,
+
+                lambda x1, x2, x3, x4, al, be: x1*x3*x3,
+                lambda x1, x2, x3, x4, al, be: x1*x3*x4,
+                lambda x1, x2, x3, x4, al, be: x1*x3*al,
+                lambda x1, x2, x3, x4, al, be: x1*x3*be,
+
+                lambda x1, x2, x3, x4, al, be: x1*x4*x4,
+                lambda x1, x2, x3, x4, al, be: x1*x4*al,
+                lambda x1, x2, x3, x4, al, be: x1*x4*be,
+
+                lambda x1, x2, x3, x4, al, be: x1*al*al,
+                lambda x1, x2, x3, x4, al, be: x1*al*be,
+
+                lambda x1, x2, x3, x4, al, be: x1*be*be,
+
+
                 lambda x1, x2, x3, x4, al, be: x2*x2*x2,
                 lambda x1, x2, x3, x4, al, be: x2*x2*x3,
                 lambda x1, x2, x3, x4, al, be: x2*x2*x4,
                 lambda x1, x2, x3, x4, al, be: x2*x2*al,
                 lambda x1, x2, x3, x4, al, be: x2*x2*be,
 
-                lambda x1, x2, x3, x4, al, be: x3*x3*x1,
-                lambda x1, x2, x3, x4, al, be: x3*x3*x2,
+                lambda x1, x2, x3, x4, al, be: x2*x3*x3,
+                lambda x1, x2, x3, x4, al, be: x2*x3*x4,
+                lambda x1, x2, x3, x4, al, be: x2*x3*al,
+                lambda x1, x2, x3, x4, al, be: x2*x3*be,
+
+                lambda x1, x2, x3, x4, al, be: x2*x4*x4,
+                lambda x1, x2, x3, x4, al, be: x2*x4*al,
+                lambda x1, x2, x3, x4, al, be: x2*x4*be,
+
+                lambda x1, x2, x3, x4, al, be: x2*al*al,
+                lambda x1, x2, x3, x4, al, be: x2*al*be,
+
+                lambda x1, x2, x3, x4, al, be: x2*be*be,
+                
                 lambda x1, x2, x3, x4, al, be: x3*x3*x3,
                 lambda x1, x2, x3, x4, al, be: x3*x3*x4,
                 lambda x1, x2, x3, x4, al, be: x3*x3*al,
                 lambda x1, x2, x3, x4, al, be: x3*x3*be,
 
-                lambda x1, x2, x3, x4, al, be: x4*x4*x1,
-                lambda x1, x2, x3, x4, al, be: x4*x4*x2,
-                lambda x1, x2, x3, x4, al, be: x4*x4*x3,
+                lambda x1, x2, x3, x4, al, be: x3*x4*x4,
+                lambda x1, x2, x3, x4, al, be: x3*x4*al,
+                lambda x1, x2, x3, x4, al, be: x3*x4*be,
+
+                lambda x1, x2, x3, x4, al, be: x3*al*al,
+                lambda x1, x2, x3, x4, al, be: x3*al*be,
+
+                lambda x1, x2, x3, x4, al, be: x3*be*be,
+
+
                 lambda x1, x2, x3, x4, al, be: x4*x4*x4,
                 lambda x1, x2, x3, x4, al, be: x4*x4*al,
                 lambda x1, x2, x3, x4, al, be: x4*x4*be,
+
+                lambda x1, x2, x3, x4, al, be: x4*al*al,
+                lambda x1, x2, x3, x4, al, be: x4*al*be,
+
+                lambda x1, x2, x3, x4, al, be: x4*be*be,
+
                 
-                lambda x1, x2, x3, x4, al, be: al*al*x1,
-                lambda x1, x2, x3, x4, al, be: al*al*x2,
-                lambda x1, x2, x3, x4, al, be: al*al*x3,
-                lambda x1, x2, x3, x4, al, be: al*al*x4,
                 lambda x1, x2, x3, x4, al, be: al*al*al,
                 lambda x1, x2, x3, x4, al, be: al*al*be,
 
-                lambda x1, x2, x3, x4, al, be: be*be*x1,
-                lambda x1, x2, x3, x4, al, be: be*be*x2,
-                lambda x1, x2, x3, x4, al, be: be*be*x3,
-                lambda x1, x2, x3, x4, al, be: be*be*x4,
-                lambda x1, x2, x3, x4, al, be: be*be*al,
+                lambda x1, x2, x3, x4, al, be: al*be*be,
+
                 lambda x1, x2, x3, x4, al, be: be*be*be,
-                
-                lambda x1, x2, x3, x4, al, be: x1*x2*x3,
-                lambda x1, x2, x3, x4, al, be: x1*x2*x4,
-                lambda x1, x2, x3, x4, al, be: x1*x2*al,
-                lambda x1, x2, x3, x4, al, be: x1*x2*be,
-                lambda x1, x2, x3, x4, al, be: x1*x3*x4,
-                lambda x1, x2, x3, x4, al, be: x1*x3*al,
-                lambda x1, x2, x3, x4, al, be: x1*x3*be,
-                lambda x1, x2, x3, x4, al, be: x1*x4*al,
-                lambda x1, x2, x3, x4, al, be: x1*x4*be,
-                lambda x1, x2, x3, x4, al, be: x1*al*be,
-
-                lambda x1, x2, x3, x4, al, be: x2*x3*x4,
-                lambda x1, x2, x3, x4, al, be: x2*x3*al,
-                lambda x1, x2, x3, x4, al, be: x2*x3*be,
-                lambda x1, x2, x3, x4, al, be: x2*x4*al,
-                lambda x1, x2, x3, x4, al, be: x2*x4*be,
-                lambda x1, x2, x3, x4, al, be: x2*al*be,                 
-
-                lambda x1, x2, x3, x4, al, be: x3*x4*al,
-                lambda x1, x2, x3, x4, al, be: x3*x4*be,
-                lambda x1, x2, x3, x4, al, be: x3*al*be,
-
-                lambda x1, x2, x3, x4, al, be: x4*al*be
                 ]
 
 sindy_library_names = [
     "x1", "x2", "x3", "x4", "al", "be",
 
-    "x1^2", "x1*x2", "x1*x3", "x1*x4", "x1*al", "x1*be"
+    "x1^2", "x1*x2", "x1*x3", "x1*x4", "x1*al", "x1*be",
     "x2^2", "x2*x3", "x2*x4", "x2*al", "x2*be",
     "x3^2", "x3*x4", "x3*al", "x3*be",
-    "x4^2", "x4*al", "x3*be",
+    "x4^2", "x4*al", "x4*be",
     "al^2", "al*be",
-    "be^2"
-
+    "be^2",
     "x1^3", "x1^2*x2", "x1^2*x3", "x1^2*x4", "x1^2*al", "x1^2*be",
-    "x2^2*x1", "x2^3", "x2^2*x3", "x2^2*x4", "x2^2*al", "x2^2*be",
-    "x3^2*x1", "x3^2*x2", "x3^3", "x3^2*x4", "x3^2*al", "x3^2*be",
-    "x4^2*x1", "x4^2*x2", "x4^2*x3", "x4^3", "x4^2*al", "x4^2*be",
-    "al^2*x1", "al^2*x2", "al^2*x3", "al^2*x4", "al^3", "al^2*be",
-    "be^2*x1", "be^2*x2", "be^2*x3", "be^2*x4", "be^2*al", "be^3",
-
-    "x1*x2*x3", "x1*x2*x4", "x1*x2*al", "x1*x2*be", "x1*x3*x4", "x1*x3*al", "x1*x3*be", "x1*x4*al", "x1*x4*be", "x1*al*be",
-    
-    "x2*x3*x4", "x2*x3*al", "x2*x3*be", "x2*x4*al", "x2*x4*be", "x2*al*be",
-    
-    "x3*x4*al", "x3*x4*be", "x3*al*be",
-
-    "x4*al*be"
+    "x1*x2^2", "x1*x2*x3", "x1*x2*x4", "x1*x2*al", "x1*x2*be",
+    "x1*x3^2", "x1*x3*x4", "x1*x3*al", "x1*x3*be",
+    "x1*x4^2", "x1*x4*al", "x1*x4*be",
+    "x1*al^2", "x1*al*be",
+    "x1*be^2",
+    "x2^3", "x2^2*x3", "x2^2*x4", "x2^2*al", "x2^2*be",
+    "x2*x3^2", "x2*x3*x4", "x2*x3*al", "x2*x3*be",
+    "x2*x4^2", "x2*x4*al", "x2*x4*be",
+    "x2*al^2", "x2*al*be",
+    "x2*be^2",
+    "x3^3", "x3^2*x4", "x3^2*al", "x3^2*be",
+    "x3*x4^2", "x3*x4*al", "x3*x4*be",
+    "x3*al^2", "x3*al*be",
+    "x3*be^2",
+    "x4^3", "x4^2*al", "x4^2*be",
+    "x4*al^2", "x4*al*be",
+    "x4*be^2",
+    "al^3", "al^2*be",
+    "al*be^2",
+    "be^3"
 ]
 
 handModel = ps.SINDy(feature_names = sindy_library_names, feature_library= ps.CustomLibrary(library_functions = sindy_library),optimizer=ps.STLSQ(threshold=1e-3)) #optimizer=ps.STLSQ(threshold=5e-4))
@@ -406,11 +411,13 @@ def model_Asindy(A, variables):
     '''
     A: matrix of SINDy coefficients for the states and parameters (transition equation)
     variables: [x1, x2, x3, x4, al, be]
+    #TODO: this is equivalent to model.predict
     '''
     
     x1, x2, x3, x4, al, be = variables
 
     sindy_library_A = np.array([x1,x2,x3,x4,al,be,
+                                
                                 x1*x1,x1*x2,x1*x3,x1*x4,x1*al,x1*be,
                                 x2*x2,x2*x3,x2*x4,x2*al,x2*be,
                                 x3*x3,x3*x4,x3*al,x3*be,
@@ -418,16 +425,28 @@ def model_Asindy(A, variables):
                                 al*al,al*be,
                                 be*be,
                                 x1*x1*x1, x1*x1*x2, x1*x1*x3, x1*x1*x4, x1*x1*al, x1*x1*be,
-                                x2*x2*x1, x2*x2*x2, x2*x2*x3, x2*x2*x4, x2*x2*al, x2*x2*be,
-                                x3*x3*x1, x3*x3*x2, x3*x3*x3, x3*x3*x4, x3*x3*al, x3*x3*be,
-                                x4*x4*x1, x4*x4*x2, x4*x4*x3, x4*x4*x4, x4*x4*al, x4*x4*be,
-                                al*al*x1, al*al*x2, al*al*x3, al*al*x4, al*al*al, al*al*be,
-                                be*be*x1, be*be*x2, be*be*x3, be*be*x4, be*be*al, be*be*be,
-                                x1*x2*x3, x1*x2*x4, x1*x2*al, x1*x2*be, x1*x3*x4, x1*x3*al, x1*x3*be, x1*x4*al, x1*x4*be, x1*al*be,
-                                x2*x3*x4, x2*x3*al, x2*x3*be, x2*x4*al, x2*x4*be, x2*al*be,                                
-                                x3*x4*al, x3*x4*be, x3*al*be,
-                                x4*al*be])
+                                x1*x2*x2, x1*x2*x3, x1*x2*x4, x1*x2*al, x1*x2*be,
+                                x1*x3*x3, x1*x3*x4, x1*x3*al, x1*x3*be,
+                                x1*x4*x4, x1*x4*al, x1*x4*be,
+                                x1*al*al, x1*al*be,
+                                x1*be*be,
+                                x2*x2*x2, x2*x2*x3, x2*x2*x4, x2*x2*al, x2*x2*be,
+                                x2*x3*x3, x2*x3*x4, x2*x3*al, x2*x3*be,
+                                x2*x4*x4, x2*x4*al, x2*x4*be,
+                                x2*al*al, x2*al*be,
+                                x2*be*be,
+                                x3*x3*x3, x3*x3*x4, x3*x3*al, x3*x3*be,
+                                x3*x4*x4, x3*x4*al, x3*x4*be,
+                                x3*al*al, x3*al*be,
+                                x3*be*be,
+                                x4*x4*x4, x4*x4*al, x4*x4*be,
+                                x4*al*al, x4*al*be,
+                                x4*be*be,
+                                al*al*al, al*al*be,
+                                al*be*be,
+                                be*be*be])
     return A @ sindy_library_A
+
 
 #%%
 # jacobian matrix A
@@ -448,118 +467,202 @@ def jacobian_A(A, variables):
     x1, x2, x3, x4, al, be = variables
 
     #dA/dx1
-    J_library[:,0] = np.array([1., 0., 0., 0., 0., 0.,
+    J_library[:,0] = np.array([
+                        1., 0., 0., 0., 0., 0.,
+                               
                         2.*x1, x2, x3, x4, al, be,
                         0., 0., 0., 0., 0.,
                         0., 0., 0., 0.,
                         0., 0., 0.,
                         0., 0.,
                         0.,
+
                         3.*x1*x1,2.*x1*x2,2.*x1*x3,2.*x1*x4,2.*x1*al,2.*x1*be,
-                        x2*x2,         0.,      0.,      0.,      0.,      0.,
-                        x3*x3,         0.,      0.,      0.,      0.,      0.,
-                        x4*x4,         0.,      0.,      0.,      0.,      0.,
-                        al*al,         0.,      0.,      0.,      0.,      0.,
-                        be*be,         0.,      0.,      0.,      0.,      0.,
-                        x2*x3,      x2*x4,   x2*al,   x2*be,   x3*x4,   x3*al,   x3*be,   x4*al,   x4*be,   al*be,                      
-                        0.,            0.,      0.,      0.,      0.,      0.,
-                        0.,            0.,      0.,                      
+                        x2*x2, x2*x3, x2*x4, x2*al, x2*be,
+                        x3*x3, x3*x4, x3*al, x3*be,
+                        x4*x4, x4*al, x4*be,
+                        al*al, al*be,
+                        be*be,
+                        0., 0., 0., 0., 0.,
+                        0., 0., 0., 0.,
+                        0., 0., 0.,
+                        0., 0.,
+                        0.,
+                        0., 0., 0., 0.,
+                        0., 0., 0.,
+                        0., 0.,
+                        0.,
+                        0., 0., 0.,
+                        0., 0.,
+                        0.,
+                        0., 0.,
+                        0.,
                         0.])
 
     #dA/dx2
-    J_library[:,1] = np.array([0., 1., 0., 0., 0., 0.,
+    J_library[:,1] = np.array([
+                        0., 1., 0., 0., 0., 0.,
+
                         0., x1, 0., 0., 0., 0.,
                         2.*x2, x3, x4, al, be,
                         0., 0., 0., 0.,
                         0., 0., 0.,
                         0., 0.,
                         0.,
-                        0.,         x1*x1,      0.,      0.,      0.,      0.,
-                        2.*x2*x1,3.*x2*x2,2.*x2*x3,2.*x2*x4,2.*x2*al,2.*x2*be,
-                        0.,         x3*x3,      0.,      0.,      0.,      0.,
-                        0.,         x4*x4,      0.,      0.,      0.,      0.,
-                        0.,         al*al,      0.,      0.,      0.,      0.,
-                        0.,         be*be,      0.,      0.,      0.,      0.,
-                        x1*x3,      x1*x4,   x1*al,   x1*be,      0.,      0.,      0.,      0.,      0.,      0.,                        
-                        x3*x4,      x3*al,   x3*be,   x4*al,   x4*be,   al*be,      
-                        0.,            0.,      0.,                  
+                    
+                        0., x1*x1, 0., 0., 0., 0.,
+                        2*x1*x2, x1*x3, x1*x4, x1*al, x1*be,
+                        0., 0., 0., 0.,
+                        0., 0., 0.,
+                        0., 0.,
+                        0.,
+                        3.*x2*x2, 2.*x2*x3, 2.*x2*x4, 2.*x2*al, 2.*x2*be,
+                        x3*x3, x3*x4, x3*al, x3*be,
+                        x4*x4, x4*al, x4*be,
+                        al*al, al*be,
+                        be*be,
+                        0., 0., 0., 0.,
+                        0., 0., 0.,
+                        0., 0.,
+                        0.,
+                        0., 0., 0.,
+                        0., 0.,
+                        0., 
+                        0., 0.,
+                        0.,
                         0.])
-    
+
     #dA/dx3
-    J_library[:,2] = np.array([ 0., 0., 1., 0., 0., 0.,
+    J_library[:,2] = np.array([ 
+                        0., 0., 1., 0., 0., 0.,
+
                         0., 0., x1, 0., 0., 0.,
                         0., x2, 0., 0., 0.,
                         2.*x3, x4, al, be,
                         0., 0., 0.,
                         0., 0.,
                         0.,
-                        0.,           0.,    x1*x1,      0.,      0.,      0.,
-                        0.,           0.,    x2*x2,      0.,      0.,      0.,
-                        2.*x3*x1,2.*x3*x2,3.*x3*x3,2.*x3*x4,2.*x3*al,2.*x3*be,
-                        0.,           0.,    x4*x4,      0.,      0.,      0.,
-                        0.,           0.,    al*al,      0.,      0.,      0.,
-                        0.,           0.,    be*be,      0.,      0.,      0.,
-                        x1*x2,        0.,       0.,      0.,  x1*x4,   x1*al,    x1*be,      0.,      0.,      0.,                        
-                        x2*x4,     x2*al,    x2*be,      0.,      0.,      0.,                        
-                        x4*al,     x4*be,    al*be,
+
+                        0., 0., x1*x1, 0., 0., 0.,
+                        0., x1*x2, 0., 0., 0.,
+                        2*x1*x3, x1*x4, x1*al, x1*be,
+                        0., 0., 0.,
+                        0., 0.,
+                        0.,
+                        0., x2*x2, 0., 0., 0.,
+                        2*x2*x3, x2*x4, x2*al, x2*be,
+                        0., 0., 0.,
+                        0., 0.,
+                        0.,
+                        3.*x3*x3, 2.*x3*x4, 2.*x3*al, 2.*x3*be,
+                        x4*x4, x4*al, x4*be,
+                        al*al, al*be,
+                        be*be,
+                        0., 0., 0.,
+                        0., 0.,
+                        0.,
+                        0.,0.,
+                        0.,
                         0.])
     
     #dA/dx4
-    J_library[:,3] = np.array([ 0., 0., 0., 1., 0., 0.,
+    J_library[:,3] = np.array([ 
+                        0., 0., 0., 1., 0., 0.,
+
                         0., 0., 0., x1, 0., 0.,
                         0., 0., x2, 0., 0.,
                         0., x3, 0., 0.,
                         2.*x4,  al, be,
                         0., 0., 
                         0.,
-                        0.,           0.,       0.,    x1*x1,      0.,      0.,
-                        0.,           0.,       0.,    x2*x2,      0.,      0.,
-                        0.,           0.,       0.,    x3*x3,      0.,      0.,
-                        2.*x4*x1, 2.*x4*x2,2.*x4*x3,3.*x4*x4,2.*x4*al,2.*x4*be,
-                        0.,           0.,       0.,    al*al,      0.,      0.,
-                        0.,           0.,       0.,    be*be,      0.,      0.,
-                        0.,        x1*x2,       0.,       0.,   x1*x3,      0.,      0.,  x1*al,   x1*be,     0.,                        
-                        x2*x3,        0.,       0.,    x2*al,   x2*be,      0.,                        
-                        x3*al,     x3*be,       0.,
-                        al*be])
+
+                        0., 0., 0., x1*x1, 0., 0.,
+                        0., 0., x1*x2, 0., 0.,
+                        0., x1*x3, 0., 0.,
+                        2*x1*x4, x1*al, x1*be,
+                        0., 0.,
+                        0.,
+                        0., 0., x2*x2, 0., 0.,
+                        0., x2*x3, 0., 0.,
+                        2*x2*x4, x2*al, x2*be,
+                        0., 0., 
+                        0.,
+                        0., x3*x3, 0., 0., 
+                        2*x3*x4, x3*al, x3*be,
+                        0., 0.,
+                        0.,
+                        3*x4*x4, 2*x4*al, 2*x4*be,
+                        al*al, al*be,
+                        be*be,
+                        0., 0.,
+                        0.,
+                        0.])
     
     #dA/dal
-    J_library[:,4] = np.array([0., 0., 0., 0., 1., 0.,
+    J_library[:,4] = np.array([
+                        0., 0., 0., 0., 1., 0.,
+
                         0., 0., 0., 0., x1, 0.,
                         0., 0., 0., x2, 0.,
                         0., 0., x3, 0.,
                         0., x4, 0.,
                         2.*al, be,
                         0.,
-                        0.,           0.,       0.,      0.,    x1*x1,      0.,
-                        0.,           0.,       0.,      0.,    x2*x2,      0.,
-                        0.,           0.,       0.,      0.,    x3*x3,      0.,
-                        0.,           0.,       0.,      0.,    x4*x4,      0.,
-                        2.*al*x1, 2.*al*x2,2.*al*x3,2.*al*x4,3.*al*al,2.*al*be,
-                        0.,           0.,       0.,      0.,    be*be,      0.,
-                        0.,           0.,    x1*x2,      0.,       0.,   x1*x3,     0.,   x1*x4,      0.,  x1*be,                        
-                        0.,        x2*x3,       0.,   x2*x4,       0.,   x2*be,                      
-                        x3*x4,        0.,    x3*be,
-                        x4*be])
+
+                        0., 0., 0., 0., x1*x1, 0.,
+                        0., 0., 0., x1*x2, 0.,
+                        0., 0., x1*x3, 0.,
+                        0., x1*x4, 0.,
+                        2*x1*al, x1*be,
+                        0., 
+                        0., 0., 0., x2*x2, 0.,
+                        0., 0., x2*x3, 0.,
+                        0., x2*x4, 0.,
+                        2*x2*al, x2*be,
+                        0.,
+                        0., 0., x3*x3, 0., 
+                        0., x3*x4, 0.,
+                        2*x3*al, x3*be,
+                        0.,
+                        0., x4*x4, 0.,
+                        2*x4*al, x4*be,
+                        0.,
+                        3.*al*al, 2.*al*be,
+                        0.,
+                        0.])
     
     #dA/dbe
-    J_library[:,5] = np.array([0., 0., 0., 0., 0., 1.,
+    J_library[:,5] = np.array([
+                        0., 0., 0., 0., 0., 1.,
+
                         0., 0., 0., 0., 0., x1,
                         0., 0., 0., 0., x2,
                         0., 0., 0., x3,
                         0., 0., x4,
                         0., al,
                         2.*be,
-                        0.,           0.,       0.,      0.,      0.,    x1*x1,
-                        0.,           0.,       0.,      0.,      0.,    x2*x2,
-                        0.,           0.,       0.,      0.,      0.,    x3*x3,
-                        0.,           0.,       0.,      0.,      0.,    x4*x4,
-                        0.,           0.,       0.,      0.,      0.,    al*al,
-                        2.*be*x1, 2.*be*x2,2.*be*x3,2.*be*x4,2.*be*al,3.*be*be,
-                        0.,           0.,       0.,    x1*x2,      0.,      0.,   x1*x3,     0.,   x1*x4,   x1*al,                        
-                        0.,           0.,    x2*x3,       0.,   x2*x4,   x2*al,                      
-                        0.,        x3*x4,    x3*al,
-                        x4*al])
+
+                        0., 0., 0., 0., 0., x1*x1,
+                        0., 0., 0., 0., x1*x2,
+                        0., 0., 0., x1*x3,
+                        0., 0., x1*x4,
+                        0., x1*al,
+                        2.*x1*be,
+                        0., 0., 0., 0., x2*x2,
+                        0., 0., 0., x2*x3,
+                        0., 0., x2*x4,
+                        0., x2*al,
+                        2.*x2*be,
+                        0., 0., 0., x3*x3,
+                        0., 0., x3*x4,
+                        0., x3*al,
+                        2.*x3*be,
+                        0., 0., x4*x4,
+                        0., x4*al,
+                        2.*x4*be,
+                        0., al*al,
+                        2*al*be,
+                        3.*be*be])
 
     F = A @ J_library
 
@@ -601,7 +704,7 @@ def jacobian_H(U,S,N_x):
 
 # %%
 # to reproduce the results
-model = handModel
+#model = handModel
 
 # %%
 ######################      PREDICT       ######################
@@ -732,8 +835,8 @@ p0_param_1 = 1e-1
 p0_param_2 = 1e-1
 # process noise
 q_x_1      = 5e-10 # prime due variabili embedded
-q_x_2      = 2e-8
-q_x_3      = 3e-8
+q_x_2      = 5e-8#2e-8 #TODO
+q_x_3      = 5e-8#3e-8  #TODO
 q_param  = 1e-11
 # measurement noise
 r_x_obs  = 3e-1
@@ -816,7 +919,8 @@ for i0 in range(1,N_l):
         aaaa = 1
 
     # Prediction phase
-    xhat_pred = xhat[0:-N_param] + dt*(model_Asindy(A,variables=xhat))
+    #xhat_pred = xhat[0:-N_param] + dt*(model_Asindy(A,variables=xhat))
+    xhat_pred = xhat[0:-N_param] + dt*(model.predict(xhat[0:-N_param], t=t_, u=xhat[-N_param:]))
     xhat_pred = np.append(xhat_pred,param)
     F = jacobian_A(A,variables=xhat)
 

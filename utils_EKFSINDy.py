@@ -361,7 +361,7 @@ def jacobian_A(A, variables):
                             2*x4*al, x4*be,
                             0.,
                             3.*al*al, 2.*al*be,
-                            0.,
+                            be*be,
                             0.])
         
         #dA/dbe

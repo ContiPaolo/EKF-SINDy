@@ -12,6 +12,7 @@ The preprint is available on [arXiv](http://arxiv.org/abs/2404.07536).
   
 - Shear building under seismic excitations (Sect. 3.1)
   - Estimation of the inter-storey stiffness `Available soon!`
+    - Train/test data are available [here](https://zenodo.org/records/11581079).
 
 
 ## Abstract

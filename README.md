@@ -6,7 +6,7 @@ Source code of the papers **"EKF–SINDy: Empowering the extended Kalman filter 
 
 
 ## Reference
-The pulbished version of "EKF–SINDy: Empowering the extended Kalman filter with sparse identification of nonlinear dynamics" is available on [CMAME journal](https://www.sciencedirect.com/science/article/pii/S0045782524005206).
+The published version of "EKF–SINDy: Empowering the extended Kalman filter with sparse identification of nonlinear dynamics" is available on [CMAME journal](https://www.sciencedirect.com/science/article/pii/S0045782524005206).
 
 The preprint of "Online learning in bifurcating dynamic systems via SINDy and Kalman filtering" is available on [arXiv](https://arxiv.org/abs/2411.04842).
 

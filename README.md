@@ -4,7 +4,8 @@ Source code of the papers:
 
 ![graphical_abstract-ezgif com-crop](https://github.com/ContiPaolo/EKF-SINDy/assets/51111500/d94bc746-9b4f-4830-a5b3-8ed06041652f)
 
-## Test cases
+## Test cases 
+#### Parameter estimation
 - Partially observed nonlinear system (Sect. 3.2):
   - Estimation of stifness of hidden oscillator (Sect. 3.2.3) `CoupledOscillators_StifnessEstimation.ipynb`
   - Estimation of linear and quadratic coupling coefficients (Sect. 3.2.4.) `CoupledOscillators_CouplingEstimation.ipynb`

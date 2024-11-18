@@ -8,7 +8,7 @@ Source code of the papers:
 #### Online model estimation:
 - Selkov model (Paper 2, Sect. 3.2):
   - Modeling and state estimation of systems undergoing Hopf bifurcations `CSelkovModel_OnlineLearning.ipynb`
-  - 
+    
 #### Parameter estimation:
 - Partially observed nonlinear system (Paper 1, Sect. 3.2):
   - Estimation of stifness of hidden oscillator (Sect. 3.2.3) `CoupledOscillators_StifnessEstimation.ipynb`

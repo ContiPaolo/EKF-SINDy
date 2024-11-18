@@ -1,5 +1,3 @@
-> :warning: The code for the paper **"Online learning in bifurcating dynamic systems via SINDy and Kalman filtering"** will be available soon.
-
 Source code of the papers:
 - **"EKF–SINDy: Empowering the extended Kalman filter with sparse identification of nonlinear dynamics"** available on [CMAME journal](https://www.sciencedirect.com/science/article/pii/S0045782524005206).
 - **"Online learning in bifurcating dynamic systems via SINDy and Kalman filtering"** available on [arXiv](https://arxiv.org/abs/2411.04842)

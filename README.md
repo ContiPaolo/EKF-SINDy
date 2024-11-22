@@ -7,7 +7,7 @@ Source code of the papers:
 ## Test cases 
 #### Online model estimation:
 - Selkov model ([2], Sect. 3.2):
-  - Modeling and state estimation of systems undergoing Hopf bifurcations `CSelkovModel_OnlineLearning.ipynb`
+  - Modeling and state estimation of systems undergoing Hopf bifurcations `SelkovModel_OnlineLearning.ipynb`
     
 #### Parameter estimation:
 - Partially observed nonlinear system ([1], Sect. 3.2):

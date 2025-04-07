@@ -8,6 +8,28 @@ import scipy
 
 from matplotlib import pyplot as plt
 
+def add_noise_with_snr(signal, snr):
+    # the signal-to-noise ratio is here defined as the ratio between the mean square of the signal
+    # and the mean square of the noise component
+    
+    # SNR is not expressed in decibel
+    # P_signal = np.mean(np.square(signal))
+    # signal_dev = P_signal / snr
+
+    # SNR in decibel
+    P_signal = np.mean(np.square(signal))
+    P_signal_dB = 10*np.log10(P_signal)
+    P_noise_dB  = P_signal_dB-snr
+    signal_dev  = 10 ** (P_noise_dB/10)
+
+    noise = np.random.normal(0, np.sqrt(signal_dev), signal.shape)
+    noisy_signal = signal + noise
+
+    # plt.plot(noisy_signal[0,:],'orange')
+    # plt.plot(signal[0,:],'black')
+
+    return noisy_signal
+
 def extract_coefficients(coeffs, selected_entries, equation_indices, sindy_library, sindy_library_names, sindy_library_du1, sindy_library_du2, n_eqs):
     """
     Extracts non-zero coefficients and associated SINDy library terms for specific equations.
@@ -223,14 +245,14 @@ def jacobian_H_Hout(h_coeffs, h_coeffs_out, dyn_state, param_state, t_plus_1, si
     return H
 
 # %% define numerical integration scheme
-def numInt(dyn_state, param_state, dt, t_, sindy_terms, sindy_terms_out, Aupd, A_out, P, Q, sindy_derivatives_u1, sindy_derivatives_u2, sindy_derivatives_u1_out, sindy_derivatives_u2_out, method):
+def numInt(dyn_state, param_state, dt, t_, sindy_terms, sindy_terms_out, Aupd, A_out, P, Q, sindy_derivatives_u1, sindy_derivatives_u2, sindy_derivatives_u1_out, sindy_derivatives_u2_out, n_eqs, method):
 
     if method == 'EF':
         # Mean state prediction
         xhat_pred = dyn_state + dt * (model_Asindy(Aupd, dyn_state, t_, sindy_terms) + model_Asindy(A_out, dyn_state, t_, sindy_terms_out))
 
         # Covariance prediction
-        F = jacobian_A_A_out(Aupd, A_out, dyn_state, param_state, t_, sindy_terms, sindy_terms_out, sindy_derivatives_u1, sindy_derivatives_u2, sindy_derivatives_u1_out, sindy_derivatives_u2_out)  # Jacobian computation
+        F = jacobian_A_A_out(A, A_out, dyn_state, param_state, t_, sindy_terms, sindy_terms_out, sindy_derivatives_u1, sindy_derivatives_u2, sindy_derivatives_u1_out, sindy_derivatives_u2_out, n_eqs)  # Jacobian computation
         P_pred = P + dt * (np.matmul(F, P) + np.matmul(P, F.transpose()) + Q)
 
     elif method == 'RK4':
@@ -243,10 +265,10 @@ def numInt(dyn_state, param_state, dt, t_, sindy_terms, sindy_terms_out, Aupd, A
         xhat_pred = dyn_state + (dt / 6) * (xk1 + 2 * xk2 + 2 * xk3 + xk4)
 
         # Covariance prediction using Runge-Kutta 4th order method
-        F = jacobian_A_A_out(Aupd, A_out, dyn_state, param_state, t_, sindy_terms, sindy_terms_out, sindy_derivatives_u1, sindy_derivatives_u2, sindy_derivatives_u1_out, sindy_derivatives_u2_out)  # Jacobian computation
-        Fk1 = jacobian_A_A_out(Aupd, A_out, dyn_state + (dt / 2) * xk1, param_state, t_ + dt / 2, sindy_terms, sindy_terms_out, sindy_derivatives_u1, sindy_derivatives_u2, sindy_derivatives_u1_out, sindy_derivatives_u2_out)
-        Fk2 = jacobian_A_A_out(Aupd, A_out, dyn_state + (dt / 2) * xk2, param_state, t_ + dt / 2, sindy_terms, sindy_terms_out, sindy_derivatives_u1, sindy_derivatives_u2, sindy_derivatives_u1_out, sindy_derivatives_u2_out)
-        Fk3 = jacobian_A_A_out(Aupd, A_out, dyn_state + dt * xk3, param_state, t_ + dt, sindy_terms, sindy_terms_out, sindy_derivatives_u1, sindy_derivatives_u2, sindy_derivatives_u1_out, sindy_derivatives_u2_out)
+        F = jacobian_A_A_out(Aupd, A_out, dyn_state, param_state, t_, sindy_terms, sindy_terms_out, sindy_derivatives_u1, sindy_derivatives_u2, sindy_derivatives_u1_out, sindy_derivatives_u2_out, n_eqs)  # Jacobian computation
+        Fk1 = jacobian_A_A_out(Aupd, A_out, dyn_state + (dt / 2) * xk1, param_state, t_ + dt / 2, sindy_terms, sindy_terms_out, sindy_derivatives_u1, sindy_derivatives_u2, sindy_derivatives_u1_out, sindy_derivatives_u2_out, n_eqs)
+        Fk2 = jacobian_A_A_out(Aupd, A_out, dyn_state + (dt / 2) * xk2, param_state, t_ + dt / 2, sindy_terms, sindy_terms_out, sindy_derivatives_u1, sindy_derivatives_u2, sindy_derivatives_u1_out, sindy_derivatives_u2_out, n_eqs)
+        Fk3 = jacobian_A_A_out(Aupd, A_out, dyn_state + dt * xk3, param_state, t_ + dt, sindy_terms, sindy_terms_out, sindy_derivatives_u1, sindy_derivatives_u2, sindy_derivatives_u1_out, sindy_derivatives_u2_out, n_eqs)
 
         Pk1 = np.matmul(F, P) + np.matmul(P, F.transpose()) + Q
         Pk2 = np.matmul(Fk1, (P + Pk1 * (dt / 2))) + np.matmul(P + Pk1 * (dt / 2), Fk1.transpose()) + Q

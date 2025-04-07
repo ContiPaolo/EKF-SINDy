@@ -143,7 +143,7 @@ def model_Asindy(A, dyn_state, t_, sindy_terms):
     return dyn_state_t_
 
 # %% update the transition model
-def updateA(A, param_state, eqOfInterest):
+def updateA(A, param_state, eqOfInterest, n_eqs):
     param_offset = 0
     # Iterate through each equation
     for eq_idx in np.arange(n_eqs):
@@ -280,13 +280,13 @@ def numInt(dyn_state, param_state, dt, t_, sindy_terms, sindy_terms_out, Aupd, A
     return xhat_pred, P_pred
 
 # %%
-def plot_outcomes(t_axis, X_data_obs, xhat_taxis, xhat_taxis_piu_sigma, xhat_taxis_meno_sigma, N_x, N_param, true_coeff, coeff_names, system, ntsp, ntst):
+def plot_outcomes(t, X_data_obs, xhat_taxis, xhat_taxis_piu_sigma, xhat_taxis_meno_sigma, obs_taxis, N_x, N_param, true_coeff, coeff_names, system, ntsp, ntst):
     variable_names = ['$u_1$', '$u_2$']
     for i1 in np.arange(N_x):
         plt.figure(figsize=[6, 3])
-        plt.plot(t_axis[ntsp:ntst], X_data_obs[ntsp:ntst, i1], 'r--', label = 'mean estimate')
-        plt.plot(t_axis[ntsp:ntst], xhat_taxis[i1, ntsp:ntst], 'k', label = 'true value')
-        plt.fill_between(t_axis[ntsp:ntst], xhat_taxis_piu_sigma[i1, ntsp:ntst], xhat_taxis_meno_sigma[i1, ntsp:ntst], color='red', alpha=0.2, label=f"mean $\\pm 1.96\sigma_x$")
+        plt.plot(t[ntsp:ntst], X_data_obs[ntsp:ntst, i1], 'r--', label = 'mean estimate')
+        plt.plot(t[ntsp:ntst], xhat_taxis[i1, ntsp:ntst], 'k', label = 'true value')
+        plt.fill_between(t[ntsp:ntst], xhat_taxis_piu_sigma[i1, ntsp:ntst], xhat_taxis_meno_sigma[i1, ntsp:ntst], color='red', alpha=0.2, label=f"mean $\\pm 1.96\sigma_x$")
         plt.xlabel('Time')
         plt.ylabel(f'{variable_names[i1]}')
         plt.title(variable_names[i1])
@@ -295,15 +295,15 @@ def plot_outcomes(t_axis, X_data_obs, xhat_taxis, xhat_taxis_piu_sigma, xhat_tax
 
     for i1 in np.arange(N_param):  # Plot linear stiffness/ coupling terms
         plt.figure(figsize=[6, 3])
-        plt.plot(t_axis[ntsp + 1:ntst], xhat_taxis[i1 + N_x, ntsp + 1:ntst], 'k', label = 'true value')
+        plt.plot(t[ntsp + 1:ntst], xhat_taxis[i1 + N_x, ntsp + 1:ntst], 'k', label = 'true value')
         # Step transition for rho
         if i1 == 0:
           rho_start, rho_end, T, T1, T_sweep  = system['rho_start'], system['rho_end'], system['T'], system['T1'], system['T_sweep']
           rho_step = np.piecewise(t,[t < T1, (t >= T1) & (t <= T1 + T_sweep), t > T1 + T_sweep],[rho_start, lambda t: rho_start + (rho_end - rho_start) * (t - T1) / T_sweep, rho_end])
-          plt.plot(t_axis[ntsp + 1:ntst], rho_step[ntsp + 1:ntst], 'r--', label = 'mean estimate')
+          plt.plot(t[ntsp + 1:ntst], rho_step[ntsp + 1:ntst], 'r--', label = 'mean estimate')
         else:
-            plt.plot(t_axis[ntsp + 1:ntst], np.ones(ntst - ntsp - 1) * true_coeff[i1], 'r--',label = 'mean estimate')
-        plt.fill_between(t_axis[ntsp + 1:ntst], xhat_taxis_piu_sigma[i1 + N_x, ntsp + 1:ntst], xhat_taxis_meno_sigma[i1 + N_x, ntsp + 1:ntst], color='red', alpha=0.2, label=f"mean $\\pm 1.96\sigma_x$")
+            plt.plot(t[ntsp + 1:ntst], np.ones(ntst - ntsp - 1) * true_coeff[i1], 'r--',label = 'mean estimate')
+        plt.fill_between(t[ntsp + 1:ntst], xhat_taxis_piu_sigma[i1 + N_x, ntsp + 1:ntst], xhat_taxis_meno_sigma[i1 + N_x, ntsp + 1:ntst], color='red', alpha=0.2, label=f"mean $\\pm 1.96\sigma_x$")
         plt.xlabel('Time')
         plt.ylabel(f'{coeff_names[i1]}')
         plt.title(coeff_names[i1])
@@ -313,7 +313,7 @@ def plot_outcomes(t_axis, X_data_obs, xhat_taxis, xhat_taxis_piu_sigma, xhat_tax
         plt.legend()
         plt.show()
 
-    return t_axis[ntsp:ntst], rho_step
+    return t[ntsp:ntst], rho_step
 
 # %% plot phase space
 def plot_phase_space(t, X_data_obs, xhat_taxis, xhat_taxis_piu_sigma, xhat_taxis_meno_sigma, N_x, plot_equil, plot_bounds, true_coeff, ntsp, ntst):

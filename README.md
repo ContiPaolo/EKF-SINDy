@@ -1,7 +1,7 @@
 Source code of the papers:
 - [1] **"EKF–SINDy: Empowering the extended Kalman filter with sparse identification of nonlinear dynamics"** open access on [CMAME](https://www.sciencedirect.com/science/article/pii/S0045782524005206)
 ![graphical_abstract-ezgif com-crop](https://github.com/ContiPaolo/EKF-SINDy/assets/51111500/d94bc746-9b4f-4830-a5b3-8ed06041652f)
-- [2] **"Online learning in bifurcating dynamic systems via SINDy and Kalman filtering"** preprint available on [Nonlinear Dynamics](https://link.springer.com/article/10.1007/s11071-025-11029-y)
+- [2] **"Online learning in bifurcating dynamic systems via SINDy and Kalman filtering"** open access on [Nonlinear Dynamics](https://link.springer.com/article/10.1007/s11071-025-11029-y)
 ![Online_EKFSINDy_crop](https://github.com/user-attachments/assets/e163aa3c-26f6-40bb-8ccd-c4a4de721210)
 
 ## Test cases 

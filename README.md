@@ -19,16 +19,17 @@ Source code of the papers:
     - Train/test data are available [here](https://zenodo.org/records/11581079): put the csv files in `data/` (or set `EKFSINDY_DATA` to their folder).
 
 ## Installation
-The project is a Python package (`ekfsindy`) managed with [uv](https://docs.astral.sh/uv/):
+The project is a Python package (`ekfsindy`, Python >= 3.10, pysindy 2, NumPy 2) managed with
+[uv](https://docs.astral.sh/uv/); `uv.lock` pins the exact versions used for the results:
 
 ```bash
-uv sync --all-extras          # creates .venv with the package, notebook and dev dependencies
+uv sync                       # creates .venv with the package, Jupyter and dev dependencies
 uv run jupyter lab            # run the notebooks
 uv run pytest                 # unit and regression tests
 ```
 
 On Google Colab, the first cell of each notebook installs the package with
-`pip install "ekfsindy[notebooks] @ git+https://github.com/ContiPaolo/EKF-SINDy"`.
+`pip install "ekfsindy @ git+https://github.com/ContiPaolo/EKF-SINDy"`; no restart is needed.
 
 ## Package overview
 ```text
@@ -51,8 +52,8 @@ import numpy as np
 import pysindy as ps
 from ekfsindy import AugmentedEKF, SparseModel, SymbolicLibrary, observation
 
-sindy = ps.SINDy(feature_library=ps.PolynomialLibrary(degree=3), feature_names=["u1", "u2"])
-sindy.fit(X_train, t=dt)
+sindy = ps.SINDy(feature_library=ps.PolynomialLibrary(degree=3))
+sindy.fit(X_train, t=dt, feature_names=["u1", "u2"])
 
 library = SymbolicLibrary.from_feature_names(sindy.get_feature_names(), ["u1", "u2"])
 library.symbolic_jacobian()                      # SymPy matrix d(theta)/d(u1, u2)

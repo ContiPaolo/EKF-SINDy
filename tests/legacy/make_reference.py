@@ -4,6 +4,13 @@ The code below mirrors the notebook cells as they were before the refactor, usin
 legacy utilities in this folder. Outputs are written to ``tests/reference/<case>.npz`` and
 used by ``tests/test_regression.py``.
 
+It needs the original environment (Python <= 3.12, numpy 1.26, pysindy 1.7.5, pyDOE 0.3.8,
+setuptools < 81), not the one in ``uv.lock``::
+
+    uv run --isolated --python 3.12 --with "numpy<2" --with "pysindy==1.7.5" \
+        --with "pyDOE==0.3.8" --with "setuptools<81" --with scikit-learn --with sympy \
+        python tests/legacy/make_reference.py
+
 Usage::
 
     uv run python tests/legacy/make_reference.py [selkov selkov_poor stiffness coupling shear]

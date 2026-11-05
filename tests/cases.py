@@ -6,7 +6,7 @@ from scipy.integrate import odeint
 from sklearn.model_selection import train_test_split
 
 from ekfsindy import AugmentedEKF, SparseModel, SymbolicLibrary, observation, systems
-from ekfsindy.data import TimeDelayEmbedding, add_noise_with_snr, read_dof_csv
+from ekfsindy.data import TimeDelayEmbedding, add_noise_with_snr, latin_hypercube, read_dof_csv
 
 SEED = 1
 
@@ -20,9 +20,9 @@ def selkov(poor=False):
     X_train = [odeint(systems.selkov, [u1_0[i], u2_0[i]], t_train, args=(system,))
                for i in range(16)]
 
-    sindy = ps.SINDy(feature_names=["u1", "u2"], feature_library=ps.PolynomialLibrary(degree=3),
+    sindy = ps.SINDy(feature_library=ps.PolynomialLibrary(degree=3),
                      optimizer=ps.STLSQ(threshold=0.2 if poor else 5e-2))
-    sindy.fit(X_train, t=system["dt"], multiple_trajectories=True)
+    sindy.fit(X_train, t=system["dt"], feature_names=["u1", "u2"])
 
     system.update(rho_start=0.92, rho_end=0.70, T1=50.0, T_sweep=50.0, T=300.0)
     t = np.arange(system["t0"], system["T"], system["dt"])
@@ -61,12 +61,10 @@ def coupled(case):
         params = np.linspace(1.0, 2.0, n_ics)[:, None]
         param_names = ["k2"]
     else:
-        from pyDOE import lhs
-
         system.update(k2=1.95**2)
         n_ics = 20
         u1_0, u2_0 = np.random.normal(-2, 1, n_ics), np.random.normal(3, 1, n_ics)
-        samples = lhs(2, samples=n_ics)
+        samples = latin_hypercube(2, n_ics)
         log_range = np.log(0.005) + (np.log(0.5) - np.log(0.005)) * samples
         params = np.column_stack([-np.exp(log_range[:, 0]), np.exp(log_range[:, 1])])
         param_names = ["alpha", "beta"]
@@ -90,9 +88,8 @@ def coupled(case):
     variables = ["x1", "x2", "x3", "x4"] + param_names
     library = SymbolicLibrary.polynomial(variables, degree=3, include_bias=False)
     sindy = ps.SINDy(feature_library=ps.PolynomialLibrary(degree=3, include_bias=False),
-                     feature_names=variables,
                      optimizer=ps.STLSQ(threshold=5e-4 if case == "stiffness" else 1e-3))
-    sindy.fit(Z_train, t=dt, multiple_trajectories=True, u=P_train, x_dot=dZ_train)
+    sindy.fit(Z_train, t=dt, u=P_train, x_dot=dZ_train, feature_names=variables)
     model = SparseModel.from_pysindy(sindy, library, n_params=len(param_names))
 
     idx_test = 0
@@ -145,7 +142,7 @@ def shear(root=None):
     inputs = [np.concatenate([theta_train[i] / scale_theta, F_train[i] / scale_F], axis=1)
               for i in range(len(U_train))]
     sindy = ps.SINDy(feature_library=library.to_pysindy(), optimizer=ps.STLSQ(threshold=1e-2))
-    sindy.fit(X, t=1e-3, u=inputs, multiple_trajectories=True, x_dot=X_dot)
+    sindy.fit(X, t=1e-3, u=inputs, x_dot=X_dot)
     model = SparseModel.from_pysindy(sindy, library, n_params=1, n_inputs=2)
 
     y = np.concatenate([U_test[idx_test] / scale_V / scale_x, V_test[idx_test] / scale_V,

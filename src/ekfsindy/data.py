@@ -21,6 +21,20 @@ def add_noise_with_snr(signal: np.ndarray, snr_db: float) -> np.ndarray:
     return signal + np.random.normal(0, np.sqrt(noise_var), signal.shape)
 
 
+def latin_hypercube(n_dims: int, n_samples: int) -> np.ndarray:
+    """Latin hypercube samples in ``[0, 1)^n_dims``, shape ``(n_samples, n_dims)``.
+
+    Same algorithm and random draws (NumPy's global generator) as ``pyDOE.lhs`` 0.3.8.
+    """
+    cut = np.linspace(0, 1, n_samples + 1)
+    u = np.random.rand(n_samples, n_dims)
+    points = u * (cut[1:] - cut[:-1])[:, None] + cut[:-1, None]
+    H = np.empty_like(points)
+    for j in range(n_dims):
+        H[:, j] = points[np.random.permutation(n_samples), j]
+    return H
+
+
 def hankel(vector: np.ndarray, length: int, shift: int = 1) -> np.ndarray:
     """Hankel matrix ``H[i, j] = vector[i * shift + j]`` with ``length`` rows."""
     vector = np.asarray(vector).ravel()

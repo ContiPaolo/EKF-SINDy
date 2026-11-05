@@ -1,12 +1,6 @@
-import os
-import sklearn
 import numpy as np
-import pandas as pd
 import matplotlib
-import filterpy
-import scipy
 
-from tensorflow.python.ops.gen_math_ops import mean
 from matplotlib import pyplot as plt
 
 # load observation data ################################################################################################################

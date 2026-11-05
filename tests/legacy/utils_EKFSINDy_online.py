@@ -1,10 +1,5 @@
-import os
-import sklearn
 import numpy as np
-import pandas as pd
 import matplotlib
-import filterpy
-import scipy
 
 from matplotlib import pyplot as plt
 
